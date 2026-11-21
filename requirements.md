@@ -42,3 +42,5 @@ python -X utf8 sarvam_reminder.py te-IN
 Each command uses a made-up borrower, prints the localized reminder, and shows the path to the WAV file when audio succeeds. Open the WAV file to check playback. If Sarvam is unavailable, the command reports which fallback it used.
 
 The app can call `generate_reminder` from `sarvam_reminder.py` with the borrower name, lender, formatted amount in rupees, language code, and the client returned by `create_sarvam_client()`. The result contains the reminder text, optional base64 WAV audio, and whether it used the local template.
+
+For an interactive chat or a microphone test from your phone, see [the testing UI instructions](testing/README.md).

@@ -1,6 +1,6 @@
 # Sarvam chat UI
 
-From the project root, with the project's existing Sarvam SDK and `.env` configured:
+Complete [team setup](../requirements.md) first, then run this from the project root:
 
 ```powershell
 python -m testing.sarvam_chat_ui
