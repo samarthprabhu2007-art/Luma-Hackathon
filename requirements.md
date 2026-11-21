@@ -35,6 +35,8 @@ The script makes one chat completion request and prints the reply. It asks the m
 ```powershell
 python -X utf8 sarvam_reminder.py hi-IN
 python -X utf8 sarvam_reminder.py kn-IN
+python -X utf8 sarvam_reminder.py ta-IN
+python -X utf8 sarvam_reminder.py te-IN
 ```
 
 Each command uses a made-up borrower, prints the localized reminder, and shows the path to the WAV file when audio succeeds. Open the WAV file to check playback. If Sarvam is unavailable, the command reports which fallback it used.

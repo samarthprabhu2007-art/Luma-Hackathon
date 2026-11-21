@@ -23,10 +23,22 @@ FALLBACK_REMINDERS = {
         "ನಮಸ್ಕಾರ {name}, ಇದು {lender} ಕಡೆಯಿಂದ ಒಂದು ಜ್ಞಾಪನೆ. "
         "ನಿಮ್ಮ {amount} ರೂಪಾಯಿ ಪಾವತಿ ಬಾಕಿಯಿದೆ. ಸಹಾಯ ಬೇಕಿದ್ದರೆ ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ."
     ),
+    "ta-IN": (
+        "வணக்கம் {name}, இது {lender} வழங்கும் நினைவூட்டல். "
+        "நீங்கள் செலுத்த வேண்டிய {amount} ரூபாய் நிலுவையில் உள்ளது. "
+        "உதவி தேவைப்பட்டால் எங்களைத் தொடர்புகொள்ளுங்கள்."
+    ),
+    "te-IN": (
+        "నమస్కారం {name}, ఇది {lender} నుంచి ఒక గుర్తుచేసే సందేశం. "
+        "మీరు చెల్లించాల్సిన {amount} రూపాయలు బకాయి ఉన్నాయి. "
+        "సహాయం అవసరమైతే మమ్మల్ని సంప్రదించండి."
+    ),
 }
 SPEAKERS = {
     "hi-IN": "kavya_hi_conversational",
     "kn-IN": "chaitra_kn_conversation",
+    "ta-IN": "gokul_ta_narration",
+    "te-IN": "kavitha_te_conversation",
 }
 PROVIDER_ERRORS = (ApiError, RequestError, ValueError)
 
@@ -43,7 +55,8 @@ def generate_reminder(
 ) -> Reminder:
     """Return localized reminder text and optional base64 WAV audio."""
     if language not in FALLBACK_REMINDERS:
-        raise ValueError("Level 1 supports hi-IN and kn-IN.")
+        supported = ", ".join(FALLBACK_REMINDERS)
+        raise ValueError(f"Unsupported reminder language. Choose from: {supported}.")
 
     details = {"name": name, "lender": lender, "amount": amount}
     fallback = FALLBACK_REMINDERS[language].format(**details)
