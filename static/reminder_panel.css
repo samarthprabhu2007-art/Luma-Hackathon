@@ -1,0 +1,19 @@
+.rem{margin-top:22px;padding-top:18px;border-top:1px solid #d8e2dc}
+.rem .primary{width:100%;margin-top:12px}
+.rem .primary:disabled{opacity:.55;cursor:default}
+.rem-form{display:grid;gap:9px;margin-top:10px}
+.rem-field{display:grid;gap:3px;font-size:12px;color:#5a6c66}
+.rem-field input,.rem-field select{border:1px solid #cbd8d1;background:#ffffff9c;padding:8px 10px;border-radius:9px;font-size:13px;color:#354e44;min-width:0;width:100%}
+.rem-steps{list-style:none;margin:14px 0 8px;padding:0;display:grid;gap:4px;font-size:12px}
+.rem-steps .ok{color:#275d3b}.rem-steps .warn{color:#805728}
+.rem-msg{background:#e2f1e8;border:1px solid #d0e3d6;border-radius:12px;padding:12px;font-size:15px!important;line-height:1.55}
+.rem audio{width:100%;margin:10px 0}
+.rem-pay{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.rem-qr{background:#fff;padding:6px;border-radius:10px;line-height:0}
+.rem-pay a{color:#215847;word-break:break-all;font-size:12px}
+.rem-status{display:inline-block;margin-top:6px;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#e4ece7;color:#385749}
+.rem-status[data-state="ACTIVE"]{background:#f5e6cb;color:#805728}
+.rem-status[data-state="PAID"]{background:#275d3b;color:#fff}
+.rem-status[data-state="PARTIALLY_PAID"]{background:#d4e8da;color:#275d3b}
+.rem-status[data-state="EXPIRED"],.rem-status[data-state="CANCELLED"]{background:#f3d9d6;color:#8a2c22}
+.rem-error{color:#8a2c22;font-size:12px!important;margin-top:8px;white-space:pre-wrap}

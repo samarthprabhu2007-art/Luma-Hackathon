@@ -27,6 +27,7 @@ function detail(row) {
   panel.append(who,badge(row.status),log,next,el('small','label','DECISION REASON'),el('p','',row.reason),facts,el('small','label','BORROWER HISTORY'));
   for(const entry of row.history||[]) {const item=el('div','entry');item.append(el('strong','',entry.title),el('small','muted',dateText(entry.at)),el('p','',entry.detail));if(entry.scan){const source=el('button','', 'View scan');source.onclick=()=>window.openImportedScan(entry.scan);item.append(source);}panel.append(item);}
   if(row.sourceImageId && window.openImportedScan){const btn=el('button','','View original scan');btn.onclick=()=>window.openImportedScan(row.sourceImageId);panel.append(btn);}
+  if(window.addReminderPanel)window.addReminderPanel(panel,row);
 }
 function render() {
   $('crumb').textContent=page; $('heading').textContent={Overview:'Collections overview','Follow-ups':'Follow-up schedule',Activity:'Collection activity'}[page];
