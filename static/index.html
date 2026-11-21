@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reminder and Pay</title>
+<style>
+  :root { --bg:#f4f6f4; --card:#fff; --ink:#15201a; --mute:#5f6d65; --brand:#0b7a45; --brand-ink:#fff;
+          --line:#dde3df; --soft:#eaf5ee; --bad:#b3261e; --warn:#8a5a00; --warn-bg:#fff4d6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111713; --card:#1a221d; --ink:#eef3ef; --mute:#97a79d; --brand:#3ec485; --brand-ink:#08150e;
+            --line:#2b362f; --soft:#17261d; --bad:#ff8a80; --warn:#ffd27a; --warn-bg:#2d2512; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; padding:16px; }
+  main { max-width:680px; margin:0 auto; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:8px 0 18px; flex-wrap:wrap; }
+  h1 { font-size:22px; margin:0; letter-spacing:-.01em; }
+  .sub { color:var(--mute); font-size:14px; margin:2px 0 0; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { font-size:12px; padding:3px 10px; border-radius:99px; border:1px solid var(--line); color:var(--mute); }
+  .chip.ok { color:var(--brand); border-color:var(--brand); }
+  .chip.bad { color:var(--bad); border-color:var(--bad); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:520px) { .grid { grid-template-columns:1fr; } }
+  label { display:block; font-size:13px; color:var(--mute); margin-bottom:4px; }
+  input, select { width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--ink); font-size:16px; }
+  input:focus, select:focus { outline:2px solid var(--brand); outline-offset:1px; }
+  button { margin-top:16px; width:100%; padding:13px; border:0; border-radius:10px; background:var(--brand); color:var(--brand-ink); font-size:16px; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.55; cursor:default; }
+  .steps { list-style:none; margin:0 0 14px; padding:0; display:grid; gap:8px; }
+  .steps li { display:flex; gap:10px; align-items:flex-start; font-size:14px; color:var(--mute); }
+  .dot { width:20px; height:20px; border-radius:50%; border:2px solid var(--line); flex:none; margin-top:1px; display:grid; place-items:center; font-size:12px; }
+  .steps li.done { color:var(--ink); } .steps li.done .dot { background:var(--brand); border-color:var(--brand); color:var(--brand-ink); }
+  .steps li.warn { color:var(--warn); } .steps li.warn .dot { background:var(--warn-bg); border-color:var(--warn); }
+  .steps li.fail { color:var(--bad); } .steps li.fail .dot { border-color:var(--bad); }
+  #msg { font-size:19px; line-height:1.5; background:var(--soft); border-radius:12px; padding:14px 16px; margin:0 0 12px; }
+  audio { width:100%; margin-bottom:10px; }
+  .pay { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  #qr { background:#fff; padding:8px; border-radius:10px; line-height:0; }
+  .pay-info { flex:1; min-width:200px; }
+  .pay-info a { color:var(--brand); word-break:break-all; font-size:14px; }
+  .status { display:inline-block; margin-top:8px; padding:4px 14px; border-radius:99px; font-weight:700; font-size:14px; border:1px solid var(--line); }
+  .status.ACTIVE { color:var(--warn); background:var(--warn-bg); border-color:var(--warn); }
+  .status.PAID { color:var(--brand-ink); background:var(--brand); border-color:var(--brand); }
+  .status.PARTIALLY_PAID { color:var(--brand); border-color:var(--brand); }
+  .status.EXPIRED, .status.CANCELLED { color:var(--bad); border-color:var(--bad); }
+  .err { color:var(--bad); font-size:14px; white-space:pre-wrap; margin:0 0 10px; }
+  .note { color:var(--mute); font-size:13px; margin:10px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Reminder and pay</h1>
+      <p class="sub">Sarvam speaks it. Cashfree collects it.</p>
+    </div>
+    <div class="chips"><span class="chip" id="cf">Cashfree</span><span class="chip" id="sv">Sarvam</span></div>
+  </header>
+
+  <form class="card" id="form">
+    <div class="grid">
+      <div><label for="name">Borrower name</label><input id="name" value="Asha" required></div>
+      <div><label for="phone">Phone (10 digits)</label><input id="phone" value="9999999999" inputmode="numeric" pattern="\d{10}" required></div>
+      <div><label for="amount">Amount (INR)</label><input id="amount" value="500" inputmode="decimal" required></div>
+      <div><label for="lang">Language</label>
+        <select id="lang"><option value="hi">Hindi</option><option value="kn">Kannada</option>
+          <option value="ta">Tamil</option><option value="te">Telugu</option></select></div>
+    </div>
+    <button id="go" type="submit">Send reminder and create pay link</button>
+  </form>
+
+  <section class="card" id="out" hidden>
+    <ul class="steps" id="steps"></ul>
+    <p class="err" id="err"></p>
+    <div id="result" hidden>
+      <p id="msg"></p>
+      <audio id="audio" controls hidden></audio>
+      <div class="pay">
+        <div id="qr"></div>
+        <div class="pay-info">
+          <div class="note" style="margin:0">Pay link</div>
+          <a id="link" target="_blank" rel="noopener"></a><br>
+          <span class="status" id="status">-</span>
+        </div>
+      </div>
+      <p class="note">Sandbox only, no real money. Test UPI: <b>success@upi</b></p>
+    </div>
+  </section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let timer;
+
+fetch('/api/health').then(r => r.json()).then(h => {
+  const mark = (el, ok, label) => { el.textContent = label + (ok ? ' ready' : ' not set'); el.className = 'chip ' + (ok ? 'ok' : 'bad'); };
+  mark($('cf'), h.cashfree_configured, 'Cashfree'); mark($('sv'), h.sarvam_configured, 'Sarvam');
+}).catch(() => {});
+
+function step(text, state) { const li = document.createElement('li'); li.className = state;
+  li.innerHTML = '<span class="dot">' + ({done:'✓', warn:'!', fail:'✕'}[state] || '') + '</span><span></span>';
+  li.lastChild.textContent = text; $('steps').appendChild(li); }
+
+$('form').onsubmit = async e => {
+  e.preventDefault(); clearInterval(timer);
+  $('go').disabled = true; $('go').textContent = 'Working...';
+  $('out').hidden = false; $('result').hidden = true; $('err').textContent = ''; $('steps').innerHTML = '';
+  try {
+    const r = await fetch('/api/remind', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name:$('name').value.trim(), phone:$('phone').value.trim(), amount:parseFloat($('amount').value), language:$('lang').value }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail));
+    step(d.text_source === 'sarvam' ? 'Message translated by Sarvam' : 'Message from built-in template', d.text_source === 'sarvam' ? 'done' : 'warn');
+    step(d.audio_b64 ? 'Voice generated by Sarvam' : 'No audio, text only', d.audio_b64 ? 'done' : 'warn');
+    step('Cashfree pay link created', 'done');
+    (d.notes || []).forEach(n => step(n, 'warn'));
+    $('msg').textContent = d.text;
+    const a = $('audio');
+    if (d.audio_b64) { a.src = 'data:audio/wav;base64,' + d.audio_b64; a.hidden = false; a.play().catch(() => {}); } else { a.hidden = true; }
+    $('link').textContent = d.link_url; $('link').href = d.link_url;
+    $('qr').innerHTML = ''; new QRCode($('qr'), { text: d.link_url, width: 150, height: 150 });
+    $('result').hidden = false; setStatus(d.link_status);
+    timer = setInterval(async () => {
+      try {
+        const s = await (await fetch('/api/status/' + d.link_id)).json();
+        setStatus(s.link_status);
+        if (s.link_status && s.link_status !== 'ACTIVE') clearInterval(timer);
+      } catch (_) {}
+    }, 3000);
+  } catch (err) { step('Could not create the reminder', 'fail'); $('err').textContent = String(err.message || err); }
+  $('go').disabled = false; $('go').textContent = 'Send reminder and create pay link';
+};
+function setStatus(s) { const el = $('status'); el.textContent = (s || '-').replace('_', ' '); el.className = 'status ' + s; }
+</script>
+</body>
+</html>
