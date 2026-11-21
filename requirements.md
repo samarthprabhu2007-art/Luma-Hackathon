@@ -43,4 +43,10 @@ Each command uses a made-up borrower, prints the localized reminder, and shows t
 
 The app can call `generate_reminder` from `sarvam_reminder.py` with the borrower name, lender, formatted amount in rupees, language code, and the client returned by `create_sarvam_client()`. The result contains the reminder text, optional base64 WAV audio, and whether it used the local template.
 
-For an interactive chat or a microphone test from your phone, see [the testing UI instructions](testing/README.md).
+## Optional phone testing
+
+- Install [Cloudflare's `cloudflared` CLI](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/#windows) on the computer running the testing UI. Verify it with `cloudflared --version`.
+- Create `testing/.env` and set `SARVAM_TUNNEL_PASSWORD` to your test password. The phone login username is `demo`. Keep this file out of Git.
+- Open the tunnel's HTTPS link in a browser on your phone and allow microphone access.
+
+See [the testing UI instructions](testing/README.md) for the Python and tunnel commands. Local chat and reminder tests only need the Sarvam SDK.
