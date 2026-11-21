@@ -54,7 +54,7 @@ function render() {
   if(!entries.length)$('list').append(el('p','empty','No matching records.'));
   detail(matches.find(r=>r.id===selected));
 }
-document.querySelectorAll('nav button').forEach(btn=>btn.onclick=()=>{document.querySelector('[aria-current]')?.removeAttribute('aria-current');btn.setAttribute('aria-current','page');page=btn.dataset.page;render();});
+document.querySelectorAll('nav button').forEach(btn=>btn.onclick=()=>{document.querySelector('[aria-current]')?.removeAttribute('aria-current');btn.setAttribute('aria-current','page');page=btn.dataset.page;if(window.setView&&window.setView(page))return;render();});
 $('search').oninput=render;$('status').onchange=render;
 $('date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
 $('add').onclick=()=>window.openListImport(async rows=>{const result=await QueueStore.importRows(rows);$('feedback').textContent=result.added+' added · '+result.skipped+' duplicate or incomplete entries skipped.';return result;});

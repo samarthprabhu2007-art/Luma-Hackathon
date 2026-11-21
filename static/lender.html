@@ -1,5 +1,37 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lender workspace · NextPay</title><link rel="stylesheet" href="/static/lender.css"><link rel="stylesheet" href="/static/import.css"><link rel="stylesheet" href="/static/reminder_panel.css"><script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><script defer src="/static/reminder_panel.js"></script><script defer src="/static/queue.js"></script><script defer src="/static/import.js"></script><script defer src="/static/lender.js"></script></head>
-<body><div class="shell"><aside class="rail"><div class="brand"><span class="mark">N</span> NextPay</div><div class="navtitle">WORKSPACE</div><nav><button data-page="Overview" aria-current="page">◫ <span>Overview</span></button><button data-page="Follow-ups">◷ <span>Follow-ups</span></button><button data-page="Activity">≋ <span>Activity</span></button></nav><div class="identity"><span class="avatar">M</span><div><strong>Meena</strong><small>Collections manager</small></div></div></aside>
-<main><header><span>Workspace <b>/</b> <strong id="crumb">Overview</strong></span><span id="date"></span></header><section class="mast"><div><div class="eyebrow"><i></i> LENDER DASHBOARD</div><h1 id="heading">Collections overview</h1></div><div><label class="primary" style="display:inline-block;cursor:pointer" tabindex="0" role="button" id="datasetLabel">Import dataset<input id="dataset" type="file" accept=".zip,.csv" hidden></label> <button id="add" class="primary">＋ Add a list</button></section>
-<section id="stats" aria-label="Queue summary"></section><div class="board"><section class="glass book"><div class="panelhead"><div><small class="label" id="source">DEMO BOOK</small><h2 id="listTitle">Borrower queue</h2></div><span id="count" class="pill"></span></div><div class="filters"><input type="search" id="search" aria-label="Search borrower or loan ID" placeholder="Search name or loan ID"><select id="status" aria-label="Filter by status"><option>All statuses</option><option>Eligible</option><option>Scheduled</option><option>Paused</option><option>Human review</option></select></div><div id="list"></div></section><aside class="glass detail" id="detail" aria-label="Selected borrower"></aside></div><p id="feedback" role="status"></p></main></div></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Collections · NextPay</title>
+<link rel="stylesheet" href="/static/lender.css"><link rel="stylesheet" href="/static/import.css"><link rel="stylesheet" href="/static/reminder_panel.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script defer src="/static/reminder_panel.js"></script><script defer src="/static/pages.js"></script>
+<script defer src="/static/queue.js"></script><script defer src="/static/import.js"></script><script defer src="/static/lender.js"></script></head>
+<body><div class="shell">
+<aside class="rail">
+  <div class="brand"><span class="mark">N</span><span>NextPay</span></div>
+  <nav aria-label="Pages">
+    <button data-page="Overview" aria-current="page"><span>Queue</span></button>
+    <button data-page="Follow-ups"><span>Follow-ups</span></button>
+    <button data-page="Activity"><span>Activity</span></button>
+    <button data-page="Payments"><span>Payments</span></button>
+    <button data-page="Studio"><span>Reminder studio</span></button>
+  </nav>
+  <div class="identity"><span id="date"></span><span class="avatar">M</span><div><strong>Meena</strong><small>Collections manager</small></div></div>
+</aside>
+<main>
+<header><span>Workspace <b>/</b> <strong id="crumb">Overview</strong></span></header>
+<section class="mast"><div><h1 id="heading">Collections overview</h1></div>
+<div class="actions"><label class="primary" tabindex="0" role="button" id="datasetLabel">Import dataset<input id="dataset" type="file" accept=".zip,.csv" hidden></label> <button id="add" class="primary quiet">Add a list</button></div></section>
+<section id="stats" aria-label="Queue summary"></section>
+<div class="board"><section class="glass book"><div class="panelhead"><div><small class="label" id="source">DEMO BOOK</small><h2 id="listTitle">Borrower queue</h2></div><span id="count" class="pill"></span></div><div class="filters"><input type="search" id="search" aria-label="Search borrower or loan ID" placeholder="Search name or loan ID"><select id="status" aria-label="Filter by status"><option>All statuses</option><option>Eligible</option><option>Scheduled</option><option>Paused</option><option>Human review</option></select></div><div id="list"></div></section><aside class="glass detail" id="detail" aria-label="Selected borrower"></aside></div>
+<p id="feedback" role="status"></p>
+
+<section id="view-payments" class="view" hidden>
+  <div class="mast"><div><h1>Payments</h1><p class="lede">Every pay link sent since the server started, with what has come back.</p></div></div>
+  <div id="pay-summary" class="strip"></div>
+  <div class="glass ledger"><table id="pay-table"><thead><tr><th>Borrower</th><th>Language</th><th class="num">Asked</th><th class="num">Received</th><th>Status</th><th>Sent</th><th></th></tr></thead><tbody></tbody></table><p id="pay-empty" class="empty" hidden>No links yet. Open a borrower in the queue and send a reminder, or use the reminder studio.</p></div>
+</section>
+
+<section id="view-studio" class="view" hidden>
+  <div class="mast"><div><h1>Reminder studio</h1><p class="lede">Write to anyone in their language and give them a way to pay. Nothing here needs a borrower from the queue.</p></div></div>
+  <div class="glass studio" id="studio-mount"></div>
+</section>
+</main></div></body></html>

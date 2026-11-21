@@ -4,6 +4,7 @@ Run:  uvicorn app:app --reload --port 8000
 """
 import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -31,6 +32,7 @@ app.include_router(collections_router)
 app.include_router(lender_ocr_router)
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 EVENTS: list[dict] = []  # webhook log (in memory)
+LINKS: list[dict] = []  # pay links created since the server started (in memory)
 
 
 class Reminder(BaseModel):
@@ -39,6 +41,7 @@ class Reminder(BaseModel):
     amount: float
     language: str = "hi"
     include_audio: bool = True  # Relay HTTP steps can set false to keep the response small
+    borrower_id: str | None = None  # loan id from the dashboard, kept for the Payments page
 
 
 class RankingRequest(BaseModel):
@@ -110,9 +113,17 @@ def remind(req: Reminder):
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, str(e))
 
+    LINKS.append({"link_id": link["link_id"], "link_url": link["link_url"], "name": req.name,
+                  "borrower_id": req.borrower_id, "amount": req.amount, "language": req.language,
+                  "created_at": datetime.now(timezone.utc).isoformat()})
     return {"text": text, "text_source": "template" if used_template else "sarvam",
             "audio_b64": audio if req.include_audio else None, "notes": notes, "amount": req.amount,
             "link_id": link["link_id"], "link_url": link["link_url"], "link_status": link["link_status"]}
+
+
+@app.get("/api/links")
+def links():
+    return list(reversed(LINKS[-100:]))
 
 
 @app.get("/api/status/{link_id}")

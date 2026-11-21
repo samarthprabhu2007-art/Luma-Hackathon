@@ -65,6 +65,15 @@ def test_cashfree_failure_is_loud(monkeypatch):
     assert client.post("/api/remind", json=BODY).status_code == 502
 
 
+def test_links_registry_records_each_pay_link(monkeypatch):
+    monkeypatch.setattr(appmod, "generate_reminder", lambda **k: Reminder("t", None, True))
+    appmod.LINKS.clear()
+    client.post("/api/remind", json={**BODY, "borrower_id": "LN-1"})
+    listed = client.get("/api/links").json()
+    assert len(listed) == 1
+    assert listed[0]["borrower_id"] == "LN-1" and listed[0]["link_id"] == "L1_x" and listed[0]["amount"] == 500
+
+
 def test_validation():
     assert client.post("/api/remind", json={**BODY, "phone": "123"}).status_code == 400
     assert client.post("/api/remind", json={**BODY, "amount": 0}).status_code == 400
