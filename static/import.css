@@ -1,0 +1,27 @@
+﻿.li-dialog{box-sizing:border-box;width:min(1040px,calc(100vw - 32px));max-height:90dvh;padding:0;color:#202632;background:rgba(248,250,255,.97);border:1px solid #fff;border-radius:24px;box-shadow:0 24px 100px #121b3a40;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.li-dialog::backdrop{background:#19223768;backdrop-filter:blur(9px)}
+.li-dialog *{box-sizing:border-box}
+.li-dialog .li-header,.li-dialog .li-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 24px;margin:0;background:rgba(250,251,255,.94)}
+.li-header{border-bottom:1px solid #dce0eb}.li-dialog h2{font-size:23px;letter-spacing:-.6px;margin:0}.li-dialog h3{font-size:16px;margin:0 0 14px}
+.li-body{padding:20px 24px}.li-body>p{margin-top:0;color:#465266;max-width:64ch}
+.li-footer{border-top:1px solid #dce0eb;position:sticky;bottom:0}.li-dialog .li-footer>.li-primary{margin-left:auto}
+.li-dialog .li-field{display:grid;gap:5px;font-size:12px;color:#455167;margin-bottom:11px}
+.li-dialog .li-field:has([type=checkbox]){display:flex;align-items:center;gap:8px;margin:0}.li-field [type=checkbox]{order:-1}
+.li-dialog .li-field input:not([type=checkbox]),.li-dialog .li-field select{font:inherit;font-size:14px;width:100%;min-height:39px;padding:7px 10px;border:1px solid #bbc4d2;border-radius:9px;background:white;color:#202632}
+.li-dialog .li-btn,.li-dialog .li-primary{cursor:pointer;font:inherit;font-weight:600;padding:8px 13px;border-radius:12px;width:auto}.li-dialog .li-btn{border:1px solid #cad2df;background:white;color:#31415b}.li-dialog .li-primary{background:#324fc2;color:white;border:1px solid #324fc2}.li-dialog button:disabled{opacity:.55}
+.li-dialog :focus-visible{outline:3px solid #5578e3;outline-offset:2px}
+.li-message{color:#4c5771;margin:0 24px 15px}.li-message:empty{display:none}
+.li-layout{display:grid;grid-template-columns:minmax(200px,.8fr) minmax(260px,1.2fr);gap:20px}
+.li-preview{display:block;border:1px solid #d8dfea;border-radius:12px;width:100%;max-height:440px;object-fit:contain;background:white}iframe.li-preview{height:420px}.li-dialog details{margin-top:12px}.li-dialog summary{cursor:pointer}.li-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto}
+.li-card{padding:14px;background:#fff;border:1px solid #d8dfea;border-radius:15px;margin:0 0 12px;min-width:0}.li-card legend{padding:0 5px;font-weight:600}.li-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}
+@media(max-width:700px){.li-layout{grid-template-columns:1fr}.li-preview{max-height:220px}.li-dialog .li-footer{flex-wrap:wrap}.li-body,.li-dialog .li-header,.li-dialog .li-footer{padding:14px}.li-message{margin:0 14px 12px}}
+.li-attachment:empty{display:none}
+.li-attachment{overflow-wrap:anywhere;margin:6px 0 12px}
+.li-dialog textarea{font:inherit;min-height:9rem;padding:10px;border:1px solid #bbc4d2;border-radius:9px}
+@media(max-width:520px){
+  .li-dialog{width:calc(100% - 16px);max-width:none;max-height:calc(100dvh - 16px)}
+  .li-dialog .li-grid{grid-template-columns:1fr}
+  .li-dialog .li-field input:not([type=checkbox]),.li-dialog .li-field select,.li-dialog textarea{font-size:16px}
+  .li-dialog .li-footer>.li-primary{width:100%;min-height:44px;margin:0}
+  .li-dialog .li-btn{min-height:44px}
+}

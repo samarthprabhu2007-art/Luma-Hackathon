@@ -4,3 +4,4 @@ Sarvam_AI_Connection_Rules.md
 *.pyc
 .venv/
 .pytest_cache/
+/data/

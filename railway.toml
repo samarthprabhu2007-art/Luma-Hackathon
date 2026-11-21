@@ -1,0 +1,3 @@
+[deploy]
+startCommand = "python shared_book.py NextPay_Training_v1.zip && uvicorn app:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/api/health"

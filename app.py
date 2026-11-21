@@ -8,7 +8,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from lender_ocr import router as lender_ocr_router
 from pydantic import BaseModel
 
 load_dotenv(Path(__file__).with_name(".env"))
@@ -20,6 +22,10 @@ from sarvam_reminder import generate_reminder  # noqa: E402
 LANGS = {"hi": "hi-IN", "kn": "kn-IN", "ta": "ta-IN", "te": "te-IN"}  # what sarvam_reminder supports
 
 app = FastAPI(title="Level 1 reminder + pay")
+from shared_book import router as book_router
+app.include_router(book_router)
+app.include_router(lender_ocr_router)
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 EVENTS: list[dict] = []  # webhook log (in memory)
 
 
@@ -31,6 +37,11 @@ class Reminder(BaseModel):
 
 
 @app.get("/")
+def dashboard():
+    return FileResponse(Path(__file__).parent / "static" / "lender.html")
+
+
+@app.get("/reminder")
 def index():
     return FileResponse(Path(__file__).parent / "static" / "index.html")
 
