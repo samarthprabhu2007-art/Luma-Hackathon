@@ -193,3 +193,59 @@ Idempotency is the trap to design around explicitly: key every webhook handler o
 - Which language(s) to demo live — confirm Bulbul’s current supported-language list before committing to Kannada on stage
 - The real daily call cap to model (≈360/day matches the original six-caller team) vs. a smaller number to walk through live on stage
 - Who plays the “authorised lender” role approving changed terms in the demo — a teammate at a dashboard button, most likely
+
+## PART C — ADDED SCOPE
+
+### 17. Meeting Notes Ingestion (OCR)
+
+**Purpose:** Some borrower and field-officer meetings are recorded only as handwritten or printed notes (branch visits, field-visit sheets, call-back slips). These notes can contain real signals, such as a borrower’s promised date or a callback request, but they are unstructured and often hard to read.
+
+**Pipeline:**
+
+1. **Capture:** Upload a photo or scan of the note, tagged with borrower loan ID, date, and the staff member who wrote it.
+2. **OCR and extraction:** Sarvam Vision reads the handwriting (Indic scripts and English) and extracts key-value fields: date, borrower ID, promised amount, promised date, callback request, payment claim, free text.
+3. **Confidence check:** Every extracted field carries a confidence level. Low-confidence or unreadable fields are shown as “needs review,” never silently filled in.
+4. **Mapping to allowed intents:** Only the fixed intent set from Section 8 (*will pay now*, *promise date given*, *already paid claim*, *cannot pay/hardship*, *callback requested*, *no response*) can reach the scorer. Free text is stored for the audit trail only.
+5. **Human confirmation:** A staff member confirms the extracted fields on the dashboard before any note changes a borrower’s score, promise, or pause status.
+
+**Rules:**
+
+- A meeting note is a **claim**, not a verified receipt. An unconfirmed “already paid” note triggers the same reconciliation pause as a call claim (Section 9).
+- Notes can contain hardship or personal details. Store only the fields needed for the workflow, and never use personal circumstances in scoring. Hardship is handled by a human, not by the ranking.
+- Every note keeps a link to the original image, so an auditor can trace any score back to the page.
+
+**Scope for the demo:** One note type (promise or payment claim) read from a synthetic handwritten sheet, confirmed on the dashboard, and shown changing the queue. Full handwriting coverage is a stretch goal.
+
+### 18. Follow-Up Engine
+
+**Purpose:** Collections is a sequence of follow-ups, not a single call. The follow-up engine decides what happens next after every contact, payment event, or missed promise, and makes sure nothing is forgotten.
+
+**Follow-up triggers and actions:**
+
+| Trigger | Follow-up action |
+| --- | --- |
+| Callback requested | Schedule a call at the borrower’s chosen time, within the 8 AM–7 PM window |
+| Promise date given | Set a reminder for the day before the promised date; check payment status on the date |
+| Promise lapses (no payment by date) | Run balance check, eligibility and contact-time checks, then re-queue with reason “promise lapsed” |
+| Call not answered | Retry after a set interval, up to a fixed cap; then mark for an alternative channel or a later day |
+| Payment link sent | Send a reminder before expiry; if expired or cancelled, reopen the obligation and re-queue |
+| Partial payment received | Record the next agreed date and remaining balance; schedule the next follow-up for that date |
+| “Already paid” claim | Open a reconciliation task for staff; pause outward collection until it is closed |
+| Hardship flagged | Stop automated contact, create a human follow-up task for the authorised lender |
+| Meeting note confirmed | Apply the confirmed intent and re-run ranking for that borrower |
+
+**Rules:**
+
+- Every follow-up has an owner (agent or named staff member), a due date, and a reason, visible on the dashboard.
+- Follow-up timers are driven by Lambda (scheduled jobs), and state changes come from Cashfree webhooks or confirmed staff actions.
+- All follow-up actions are idempotent. A repeated timer or webhook must not send a second reminder or create a second task.
+- Automated contact stops for any borrower who has asked not to be contacted, or who has been flagged for hardship.
+
+**Scope for the demo:** Callback scheduling, promise-date reminder, promise-lapse re-queue, and partial-payment next-date scheduling. The others are stretch goals.
+
+### 19. Updated Workstreams and Architecture Notes
+
+- **Workstream C (Voice/outreach)** also owns the follow-up call scripts.
+- **Workstream D (Payments & events)** also owns the follow-up scheduler (Lambda timers) and the follow-up task table.
+- **Workstream E (Dashboard)** adds a meeting-note review screen (scan, extracted fields, confidence, confirm button) and a follow-up task list (owner, due date, reason).
+- **Architecture addition:** \[Meeting note image\] → \[Sarvam Vision OCR (Lambda)\] → \[Staff confirmation on dashboard\] → \[Event Handler\] → \[Re-rank + create follow-up tasks\].
