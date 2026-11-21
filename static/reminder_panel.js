@@ -17,7 +17,7 @@
 
   function stateFor(row) {
     if (!state.has(row.id)) {
-      state.set(row.id, {lang: FROM_BOOK[row.language] || 'hi', amount: row.balance || '', phone: '9999999999', name: row.name || ''});
+      state.set(row.id, {lang: FROM_BOOK[row.language] || 'hi', amount: row.balance || '', phone: '9999999999', name: row.name || '', sms: false});
     }
     return state.get(row.id);
   }
@@ -51,12 +51,16 @@
     const s = stateFor(row);
     s.error = ''; s.result = null;
     if (!String(s.name).trim()) { s.error = 'Enter the borrower\'s name first.'; const b = live(row.id); if (b) paint(b, row); return; }
+    if (s.sms && String(s.phone).trim() === '9999999999') {
+      s.error = 'Enter the borrower\'s real phone number before texting them the link.';
+      const b = live(row.id); if (b) paint(b, row); return;
+    }
     button.disabled = true; button.textContent = 'Working...';
     try {
       const res = await fetch('/api/remind', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({name: String(s.name).trim(), phone: String(s.phone).trim(), amount: Number(s.amount),
-                              language: s.lang, borrower_id: row.studio ? null : row.id}),
+                              language: s.lang, borrower_id: row.studio ? null : row.id, deliver_sms: !!s.sms}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail));
@@ -90,8 +94,12 @@
       const name = el('input'); name.value = s.name; name.placeholder = 'Borrower name'; name.oninput = () => { s.name = name.value; };
       form.append(field('Borrower name', name));
     }
-    form.append(field('Language', lang), field('Amount (INR)', amount), field('Phone, sandbox test number', phone));
-    const go = el('button', 'primary', 'Send reminder and create pay link');
+    form.append(field('Language', lang), field('Amount (INR)', amount), field('Borrower phone', phone));
+    const sms = el('input'); sms.type = 'checkbox'; sms.checked = !!s.sms; sms.onchange = () => { s.sms = sms.checked; };
+    const smsRow = el('label', 'rem-check'); smsRow.append(sms, el('span', '', 'Text the pay link to this phone (sent by Cashfree)'));
+    form.append(smsRow);
+    const go = el('button', 'primary', s.sms ? 'Send to borrower' : 'Send reminder and create pay link');
+    sms.addEventListener('change', () => { go.textContent = sms.checked ? 'Send to borrower' : 'Send reminder and create pay link'; });
     go.type = 'button'; go.onclick = () => send(row, go);
     box.append(form, go);
 
@@ -114,13 +122,24 @@
     const pay = el('div', 'rem-pay');
     const info = el('div', 'rem-link');
     const link = el('a', '', r.link_url); link.href = r.link_url; link.target = '_blank'; link.rel = 'noopener';
-    info.append(el('small', 'muted', 'Pay link'), link, el('span', 'stamp', '-'));
+    info.append(el('small', 'muted', 'Pay link'), link);
     if (window.QRCode) {
       const qr = el('div', 'rem-qr'); pay.append(qr);
       new window.QRCode(qr, {text: r.link_url, width: 112, height: 112});
     }
     pay.append(info);
-    box.append(pay, el('p', 'muted', 'Sandbox only, no real money. Test UPI: success@upi'));
+    const status = el('span', 'stamp', '-');
+    if (r.sms_requested) {
+      // The borrower gets the link by SMS; the lender sees only where it went and what came back.
+      box.append(el('p', 'rem-sent', 'Cashfree is texting the pay link to the phone ending ' + r.phone_tail + '. Sandbox accounts may not deliver real texts.'), status);
+      const more = el('details', 'rem-more');
+      more.append(el('summary', '', 'Show the link and QR code'), pay);
+      box.append(more);
+    } else {
+      info.append(status);
+      box.append(pay);
+    }
+    box.append(el('p', 'muted', 'Sandbox only, no real money. Test UPI: success@upi'));
     setStatus(box, s);
   }
 

@@ -74,6 +74,25 @@ def test_links_registry_records_each_pay_link(monkeypatch):
     assert listed[0]["borrower_id"] == "LN-1" and listed[0]["link_id"] == "L1_x" and listed[0]["amount"] == 500
 
 
+def test_sms_delivery_is_opt_in_and_passes_text_to_cashfree(monkeypatch):
+    seen = {}
+    def fake_create(name, phone, amount, **kw):
+        seen.update(kw)
+        return {"link_id": "L1_x", "link_url": "https://payments-test.cashfree.com/links/x", "link_status": "ACTIVE"}
+    monkeypatch.setattr(cashfree, "create_link", fake_create)
+    monkeypatch.setattr(appmod, "generate_reminder", lambda **k: Reminder("ನಮಸ್ಕಾರ", None, False))
+    monkeypatch.setattr(appmod, "LINKS", [])
+    client.post("/api/remind", json=BODY)
+    assert seen["notify_sms"] is False and seen["purpose"] == "ನಮಸ್ಕಾರ"  # message shown on the pay page
+    d = client.post("/api/remind", json={**BODY, "phone": "9876543210", "deliver_sms": True}).json()
+    assert seen["notify_sms"] is True and d["sms_requested"] is True and d["phone_tail"] == "3210"
+
+
+def test_sms_to_the_demo_placeholder_number_is_refused():
+    r = client.post("/api/remind", json={**BODY, "deliver_sms": True})  # BODY uses 9999999999
+    assert r.status_code == 400 and "real phone" in r.json()["detail"]
+
+
 def test_validation():
     assert client.post("/api/remind", json={**BODY, "phone": "123"}).status_code == 400
     assert client.post("/api/remind", json={**BODY, "amount": 0}).status_code == 400

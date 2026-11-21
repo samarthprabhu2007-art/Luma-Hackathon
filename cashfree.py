@@ -29,8 +29,11 @@ def _base() -> str:
 
 
 def create_link(name: str, phone: str, amount: float, purpose: str = "Payment reminder",
-                partial: bool = True, min_partial: float | None = None) -> dict:
-    """Create a payment link. Returns Cashfree's JSON (has link_id, link_url, link_status)."""
+                partial: bool = True, min_partial: float | None = None, notify_sms: bool = False) -> dict:
+    """Create a payment link. Returns Cashfree's JSON (has link_id, link_url, link_status).
+
+    notify_sms asks Cashfree to text the link to customer_phone itself.
+    """
     body = {
         "link_id": "L1_" + uuid.uuid4().hex[:16],
         "link_amount": float(amount),
@@ -39,7 +42,7 @@ def create_link(name: str, phone: str, amount: float, purpose: str = "Payment re
         "customer_details": {"customer_name": name, "customer_phone": phone},
         "link_partial_payments": partial,
         "link_expiry_time": (datetime.now(IST) + timedelta(days=1)).isoformat(timespec="seconds"),
-        "link_notify": {"send_sms": False, "send_email": False},
+        "link_notify": {"send_sms": notify_sms, "send_email": False},
     }
     if partial:
         body["link_minimum_partial_amount"] = float(min_partial or max(1, round(float(amount) * 0.2)))

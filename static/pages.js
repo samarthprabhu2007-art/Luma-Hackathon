@@ -3,7 +3,7 @@
 (function () {
   const $ = id => document.getElementById(id);
   const DASH = ['main > .mast', '#stats', '.board', '#feedback'];
-  const VIEWS = {Payments: 'view-payments', Studio: 'view-studio'};
+  const VIEWS = {Payments: 'view-payments', Studio: 'view-studio', Calls: 'view-calls'};
   const FINAL = ['PAID', 'EXPIRED', 'CANCELLED'];
   const LANG_NAME = {hi: 'Hindi', kn: 'Kannada', ta: 'Tamil', te: 'Telugu'};
   const money = n => new Intl.NumberFormat('en-IN', {style: 'currency', currency: 'INR', maximumFractionDigits: 2}).format(n || 0);
@@ -80,6 +80,58 @@
     window.addReminderPanel($('studio-mount'), {id: 'studio', studio: true, name: '', balance: 500});
   }
 
+  /* Calls page: the approved list, one Call button per borrower. Phone numbers never reach the browser in full. */
+  const callState = new Map(); // borrower id -> last result text
+  let callList = {contacts: [], missing_settings: [], window_open: true, now_ist: ''};
+
+  async function callOne(contact, button) {
+    button.disabled = true; button.textContent = 'Calling...';
+    try {
+      const res = await fetch('/api/calls', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({borrower_id: contact.borrower_id})});
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail));
+      callState.set(contact.borrower_id, 'Requested, attempt ' + String(data.attempt_id).slice(0, 8));
+    } catch (err) {
+      callState.set(contact.borrower_id, 'Not placed: ' + String(err.message || err));
+    }
+    drawCalls();
+  }
+
+  function drawCalls() {
+    const note = $('call-note');
+    const bits = [];
+    if (callList.missing_settings.length) bits.push('Not ready. Missing in .env: ' + callList.missing_settings.join(', ') + '.');
+    if (!callList.window_open) bits.push('It is ' + callList.now_ist + ' IST, outside the 8 AM to 7 PM calling window.');
+    note.textContent = bits.join(' ');
+    note.hidden = bits.length === 0;
+    $('call-empty').hidden = callList.contacts.length > 0;
+    $('call-table').hidden = callList.contacts.length === 0;
+    $('call-table').tBodies[0].replaceChildren(...callList.contacts.map(c => {
+      const tr = el('tr');
+      const who = el('td'); who.append(el('strong', '', c.name), el('small', 'muted', c.borrower_id));
+      const btn = el('button', 'primary quiet', c.blocked ? 'Do not call' : 'Call now');
+      btn.type = 'button'; btn.disabled = c.blocked;
+      btn.onclick = () => { if (confirm('Phone ' + c.name + ' now at ' + c.phone_masked + '?')) callOne(c, btn); };
+      const act = el('td'); act.append(btn);
+      tr.append(who, el('td', '', c.language_code), el('td', 'num', money(c.outstanding_inr)), el('td', '', c.phone_masked), el('td', 'muted', callState.get(c.borrower_id) || '-'), act);
+      return tr;
+    }));
+  }
+
+  async function loadCalls() {
+    try { callList = await (await fetch('/api/calls/contacts', {cache: 'no-store'})).json(); } catch (_) { return; }
+    drawCalls();
+  }
+
+  $('call-all').onclick = async () => {
+    const people = callList.contacts.filter(c => !c.blocked);
+    if (!people.length || !confirm('Phone all ' + people.length + ' people on the list now?')) return;
+    for (const c of people) {
+      const btn = [...document.querySelectorAll('#call-table button')].find(b => b.closest('tr')?.firstChild.textContent.includes(c.borrower_id)) || el('button');
+      await callOne(c, btn);
+    }
+  };
+
   window.setView = function (page) {
     const extra = VIEWS[page];
     for (const sel of DASH) document.querySelectorAll(sel).forEach(n => { n.hidden = !!extra; });
@@ -87,6 +139,7 @@
     clearInterval(poller);
     if (page === 'Payments') { $('crumb').textContent = 'Payments'; loadPayments(); poller = setInterval(loadPayments, 5000); }
     if (page === 'Studio') { $('crumb').textContent = 'Reminder studio'; mountStudio(); }
+    if (page === 'Calls') { $('crumb').textContent = 'Calls'; loadCalls(); }
     return !!extra;
   };
 })();

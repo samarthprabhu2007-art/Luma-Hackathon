@@ -23,6 +23,7 @@ from sarvam_client import create_sarvam_client  # noqa: E402
 from sarvam_reminder import generate_reminder  # noqa: E402
 
 LANGS = {"hi": "hi-IN", "kn": "kn-IN", "ta": "ta-IN", "te": "te-IN"}  # what sarvam_reminder supports
+PLACEHOLDER_PHONE = "9999999999"  # the demo default; never text it
 
 app = FastAPI(title="Level 1 reminder + pay")
 from shared_book import router as book_router
@@ -30,6 +31,8 @@ app.include_router(book_router)
 from collections_actions import router as collections_router
 app.include_router(collections_router)
 app.include_router(lender_ocr_router)
+from voice_calls import router as voice_calls_router
+app.include_router(voice_calls_router)
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 EVENTS: list[dict] = []  # webhook log (in memory)
 LINKS: list[dict] = []  # pay links created since the server started (in memory)
@@ -42,6 +45,7 @@ class Reminder(BaseModel):
     language: str = "hi"
     include_audio: bool = True  # Relay HTTP steps can set false to keep the response small
     borrower_id: str | None = None  # loan id from the dashboard, kept for the Payments page
+    deliver_sms: bool = False  # ask Cashfree to text the pay link to the borrower's phone
 
 
 class RankingRequest(BaseModel):
@@ -85,6 +89,8 @@ def remind(req: Reminder):
         raise HTTPException(400, "phone must be 10 digits")
     if req.amount <= 0:
         raise HTTPException(400, "amount must be positive")
+    if req.deliver_sms and req.phone == PLACEHOLDER_PHONE:
+        raise HTTPException(400, "Enter the borrower's real phone number before texting them the link.")
     if not cashfree.configured():
         raise HTTPException(503, "Cashfree keys missing in .env")
 
@@ -109,15 +115,19 @@ def remind(req: Reminder):
 
     # 2. money: this must work
     try:
-        link = cashfree.create_link(req.name, req.phone, req.amount)
+        # The reminder text is also the link's purpose, so the borrower reads it in their own
+        # language on Cashfree's pay page.
+        link = cashfree.create_link(req.name, req.phone, req.amount, purpose=text[:480],
+                                    notify_sms=req.deliver_sms)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(502, str(e))
 
     LINKS.append({"link_id": link["link_id"], "link_url": link["link_url"], "name": req.name,
                   "borrower_id": req.borrower_id, "amount": req.amount, "language": req.language,
-                  "created_at": datetime.now(timezone.utc).isoformat()})
+                  "sms": req.deliver_sms, "created_at": datetime.now(timezone.utc).isoformat()})
     return {"text": text, "text_source": "template" if used_template else "sarvam",
             "audio_b64": audio if req.include_audio else None, "notes": notes, "amount": req.amount,
+            "sms_requested": req.deliver_sms, "phone_tail": req.phone[-4:],
             "link_id": link["link_id"], "link_url": link["link_url"], "link_status": link["link_status"]}
 
 

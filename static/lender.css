@@ -103,6 +103,9 @@ td strong{display:block;font-size:14px}
 .quiet-link{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
 .quiet-link:hover{text-decoration-color:var(--ink)}
 
+.callnote{margin:0 0 14px;padding:10px 14px;border-left:3px solid var(--part);background:var(--sheet);color:var(--ink);font-size:13px}
+td .primary{padding:5px 12px}td .muted{max-width:240px}
+
 /* the rubber stamp: money received */
 .stamp{display:inline-block;margin-top:6px;padding:1px 9px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;border:1.5px solid var(--rule);border-radius:var(--r);color:var(--ink3);background:none;white-space:nowrap}
 .stamp[data-state="ACTIVE"]{color:var(--part);border-color:#dcc08c}

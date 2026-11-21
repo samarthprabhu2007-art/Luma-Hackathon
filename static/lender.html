@@ -11,8 +11,9 @@
     <button data-page="Overview" aria-current="page"><span>Queue</span></button>
     <button data-page="Follow-ups"><span>Follow-ups</span></button>
     <button data-page="Activity"><span>Activity</span></button>
+    <button data-page="Calls"><span>Calls</span></button>
     <button data-page="Payments"><span>Payments</span></button>
-    <button data-page="Studio"><span>Reminder studio</span></button>
+    <button data-page="Studio"><span>Studio</span></button>
   </nav>
   <div class="identity"><span id="date"></span><span class="avatar">M</span><div><strong>Meena</strong><small>Collections manager</small></div></div>
 </aside>
@@ -23,6 +24,12 @@
 <section id="stats" aria-label="Queue summary"></section>
 <div class="board"><section class="glass book"><div class="panelhead"><div><small class="label" id="source">DEMO BOOK</small><h2 id="listTitle">Borrower queue</h2></div><span id="count" class="pill"></span></div><div class="filters"><input type="search" id="search" aria-label="Search borrower or loan ID" placeholder="Search name or loan ID"><select id="status" aria-label="Filter by status"><option>All statuses</option><option>Eligible</option><option>Scheduled</option><option>Paused</option><option>Human review</option></select></div><div id="list"></div></section><aside class="glass detail" id="detail" aria-label="Selected borrower"></aside></div>
 <p id="feedback" role="status"></p>
+
+<section id="view-calls" class="view" hidden>
+  <div class="mast"><div><h1>Calls</h1><p class="lede">Sarvam's voice agent phones the borrowers on the approved list, in their language. Calls only go out between 8 AM and 7 PM.</p></div><div class="actions"><button id="call-all" class="primary">Call everyone on the list</button></div></div>
+  <p id="call-note" class="callnote" role="status"></p>
+  <div class="glass ledger"><table id="call-table"><thead><tr><th>Borrower</th><th>Language</th><th class="num">Outstanding</th><th>Phone</th><th>Last call</th><th></th></tr></thead><tbody></tbody></table><p id="call-empty" class="empty" hidden>No approved call list found. Put the contact file in the data folder as call_contacts.csv.</p></div>
+</section>
 
 <section id="view-payments" class="view" hidden>
   <div class="mast"><div><h1>Payments</h1><p class="lede">Every pay link sent since the server started, with what has come back.</p></div></div>

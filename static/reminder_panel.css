@@ -15,6 +15,10 @@
 .rem-qr{background:#fff;padding:6px;border:1px solid var(--rule);border-radius:var(--r);line-height:0}
 .rem-link{flex:1;min-width:180px;display:grid;gap:4px;justify-items:start}
 .rem-link a{color:var(--ink);font-size:12px;word-break:break-all}
+.rem-check{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--ink);line-height:1.4}
+.rem-check input{margin-top:2px;flex:none}
+.rem-sent{font-size:13px;color:var(--ink);margin:8px 0 4px}
+.rem-more{margin:10px 0 4px}.rem-more summary{cursor:pointer;color:var(--ink2);font-size:13px;margin-bottom:10px}
 .rem-error{color:var(--alert);font-size:13px;margin-top:10px;white-space:pre-wrap}
 
 /* reminder studio page */
