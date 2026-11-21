@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sarvam Chat</title>
+<style>
+  :root { color-scheme: light; font-family: "Segoe UI", sans-serif; color: #192c29; background: #f4f6f0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100dvh; padding: clamp(12px, 4vw, 36px); display: grid; place-items: center; }
+  main { width: min(100%, 760px); min-height: min(700px, calc(100dvh - 72px)); display: grid; grid-template-rows: auto 1fr auto; background: #fff; border: 1px solid #d9e2d8; border-radius: 22px; box-shadow: 0 20px 65px #19322c12; }
+  header, form { padding: clamp(14px, 3vw, 26px); }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; justify-content: space-between; border-bottom: 1px solid #e3e9e0; }
+  h1 { margin: 0; font-size: clamp(24px, 5vw, 36px); letter-spacing: -.04em; }
+  label { display: grid; gap: 5px; font-size: .875rem; color: #455e53; }
+  select, textarea, button { font: inherit; }
+  select, textarea { border: 1px solid #bacbc0; border-radius: 10px; background: #fff; color: inherit; padding: 10px 12px; }
+  :focus-visible { outline: 3px solid #498873; outline-offset: 2px; }
+  #chat { min-height: 250px; max-height: 56vh; overflow: auto; padding: clamp(14px, 3vw, 26px); }
+  #empty { color: #455e53; margin: 12px 0; }
+  .turn { margin: 0 0 14px; display: grid; gap: 5px; justify-items: start; }
+  .turn.user { justify-items: end; }
+  .turn small { color: #455e53; }
+  .turn p { margin: 0; max-width: min(100%, 540px); white-space: pre-wrap; overflow-wrap: anywhere; background: #eef3ed; border-radius: 12px; padding: 10px 14px; }
+  .turn.user p { background: #205444; color: white; }
+  audio { width: min(100%, 300px); margin-top: 5px; }
+  form { border-top: 1px solid #e3e9e0; }
+  textarea { width: 100%; min-height: 72px; resize: vertical; }
+  .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
+  button { cursor: pointer; border-radius: 10px; border: 1px solid #205444; background: #205444; color: #fff; padding: 9px 15px; font-weight: 600; }
+  button.secondary { background: white; color: #205444; }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { min-height: 1.4em; margin: 8px 0 0; color: #455e53; font-size: .875rem; }
+  #status.error { color: #a42b22; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Sarvam Chat</h1>
+    <label>Conversation language
+      <select id="language">
+        <option value="hi-IN">हिन्दी · Hindi</option>
+        <option value="kn-IN">ಕನ್ನಡ · Kannada</option>
+        <option value="ta-IN">தமிழ் · Tamil</option>
+        <option value="te-IN">తెలుగు · Telugu</option>
+      </select>
+    </label>
+  </header>
+  <section id="chat" role="log" aria-label="Conversation" aria-live="polite">
+    <p id="empty">Type a message or use your microphone to start.</p>
+  </section>
+  <form id="composer">
+    <label for="message">Message</label>
+    <textarea id="message" maxlength="1200" placeholder="Ask Sarvam something…" required></textarea>
+    <div class="actions">
+      <button id="mic" class="secondary" type="button">Start recording</button>
+      <button id="send" type="submit">Send</button>
+    </div>
+    <p id="status" role="status"></p>
+  </form>
+</main>
+<script>
+  const chat = document.querySelector('#chat');
+  const language = document.querySelector('#language');
+  const message = document.querySelector('#message');
+  const mic = document.querySelector('#mic');
+  const send = document.querySelector('#send');
+  const status = document.querySelector('#status');
+  const turns = [];
+  let recorder = null;
+  let recordingTimer = null;
+
+  function showStatus(text, error = false) {
+    status.textContent = text;
+    status.classList.toggle('error', error);
+  }
+
+  function lockControls(locked) {
+    send.disabled = locked;
+    mic.disabled = locked;
+    language.disabled = locked;
+  }
+
+  function addTurn(role, text) {
+    document.querySelector('#empty')?.remove();
+    const turn = document.createElement('article');
+    turn.className = 'turn ' + role;
+    const label = document.createElement('small');
+    label.textContent = role === 'user' ? 'You' : 'Sarvam';
+    const content = document.createElement('p');
+    content.textContent = text;
+    turn.append(label, content);
+    chat.append(turn);
+    chat.scrollTop = chat.scrollHeight;
+    return turn;
+  }
+
+  async function request(path, options) {
+    const response = await fetch(path, {
+      method: 'POST',
+      ...options,
+      headers: { Accept: 'application/json', ...options.headers },
+    });
+    if (!response.headers.get('Content-Type')?.includes('application/json')) {
+      throw new Error(`The test link returned a web page instead of a reply (HTTP ${response.status}). Try again and check the Python window if it continues.`);
+    }
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Request failed (HTTP ${response.status}).`);
+    return data;
+  }
+
+  async function addAudio(turn, text, locale) {
+    try {
+      const { audio } = await request('/api/speak', {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: locale, message: text.slice(0, 2500) }),
+      });
+      const player = document.createElement('audio');
+      player.controls = true;
+      player.preload = 'none';
+      player.setAttribute('aria-label', 'Play Sarvam reply');
+      player.src = 'data:audio/wav;base64,' + audio;
+      turn.append(player);
+    } catch {
+      const note = document.createElement('small');
+      note.textContent = 'Voice playback unavailable.';
+      turn.append(note);
+    }
+  }
+
+  document.querySelector('#composer').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const text = message.value.trim();
+    if (!text || send.disabled) return;
+    const locale = language.value;
+    lockControls(true);
+    showStatus('Sarvam is replying…');
+    const pending = addTurn('user', text);
+    try {
+      const reply = await request('/api/chat', {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: locale, message: text, history: turns.slice(-8) }),
+      });
+      const responseTurn = addTurn('assistant', reply.text);
+      void addAudio(responseTurn, reply.text, locale);
+      turns.push({ role: 'user', content: text }, { role: 'assistant', content: reply.text });
+      turns.splice(0, Math.max(0, turns.length - 8));
+      if (message.value.trim() === text) message.value = '';
+      showStatus('');
+    } catch (error) {
+      pending.remove();
+      showStatus(error.message, true);
+    } finally {
+      lockControls(false);
+      message.focus();
+    }
+  });
+
+  mic.addEventListener('click', async () => {
+    if (recorder?.state === 'recording') {
+      recorder.stop();
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      showStatus('Microphone access is unavailable. You can still type.', true);
+      return;
+    }
+
+    let stream;
+    lockControls(true);
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
+        .find((format) => MediaRecorder.isTypeSupported(format));
+      if (!mimeType) throw new Error('Try recording in Chrome or Edge.');
+      recorder = new MediaRecorder(stream, { mimeType });
+      const chunks = [];
+      recorder.addEventListener('dataavailable', (event) => chunks.push(event.data));
+      recorder.addEventListener('stop', async () => {
+        clearTimeout(recordingTimer);
+        stream.getTracks().forEach((track) => track.stop());
+        recorder = null;
+        mic.textContent = 'Start recording';
+        lockControls(true);
+        showStatus('Transcribing…');
+        try {
+          const type = mimeType.split(';')[0];
+          const transcript = await request('/api/transcribe?language=' + encodeURIComponent(language.value), {
+            body: new Blob(chunks, { type }),
+          });
+          message.value = [message.value.trim(), transcript.text].filter(Boolean).join(' ').slice(0, 1200);
+          showStatus('Review the transcript, then press Send.');
+        } catch (error) {
+          showStatus(error.message, true);
+        } finally {
+          lockControls(false);
+          message.focus();
+        }
+      });
+      recorder.start();
+      recordingTimer = setTimeout(() => recorder?.stop(), 25000);
+      mic.disabled = false;
+      mic.textContent = 'Stop recording';
+      showStatus('Recording. Press Stop when finished.');
+    } catch (error) {
+      stream?.getTracks().forEach((track) => track.stop());
+      recorder = null;
+      lockControls(false);
+      showStatus(error.name === 'NotAllowedError' ? 'Allow microphone access or type your message.' : error.message, true);
+    }
+  });
+</script>
+</body>
+</html>
