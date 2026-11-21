@@ -27,6 +27,8 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from lender_ocr import read_scan
+from ranking_gateway import rank_borrowers, RankingGatewayError
+from lambda_backend.ranking import RankingInputError
 
 
 
@@ -55,6 +57,8 @@ def database():
             CREATE TABLE IF NOT EXISTS scans(id TEXT PRIMARY KEY, mime TEXT, content BLOB);
 
             CREATE TABLE IF NOT EXISTS notes(id TEXT PRIMARY KEY, borrower TEXT, at TEXT, text TEXT, staff TEXT, scan TEXT);
+            CREATE TABLE IF NOT EXISTS receipts(transaction_id TEXT PRIMARY KEY, borrower TEXT, amount INTEGER, verified_at TEXT);
+            CREATE TABLE IF NOT EXISTS audit(sequence INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, event TEXT);
 
             """)
 
@@ -68,39 +72,54 @@ def database():
 
 def load_dataset(path):
 
-    with zipfile.ZipFile(path) as archive, archive.open("borrowers.csv") as file:
+    with zipfile.ZipFile(path) as archive, archive.open("borrowers.csv" if "borrowers.csv" in archive.namelist() else "blind/borrowers.csv") as file:
 
         return load_csv(io.TextIOWrapper(file, encoding="utf-8-sig"))
 
 
 
 def load_csv(file):
-
+    snapshots = list(csv.DictReader(file))
+    decisions = rank_borrowers(snapshots)
+    by_id = {r['borrower_id']: r for r in decisions['ranked'] + decisions['excluded']}
     with database() as db:
-
         added = 0
-
-        for r in csv.DictReader(file):
-
-            route = r["expected_route"]
-
-            status = "Eligible" if route == "CALL" else "Scheduled" if route.startswith("WAIT") else "Human review" if r["hardship_open"] == "1" else "Paused"
-
-            reason = r["score_reason"]
-
-            row = dict(id=r["loan_number"], name=r["display_name"], balance=float(r["outstanding_inr"]), status=status,
-
-                       language=r["language_code"], score=int(r["priority_score"]) if r["priority_score"] else None,
-
-                       action=reason, reason=reason, outcome=r["last_intent"], owner="Unassigned",
-
-                       due=r["next_agreed_followup_ist"] or r["requested_callback_at_ist"] or r["active_promise_due_ist"], history=[])
-
-            position = int(r["expected_rank"]) if r["expected_rank"] else 100000+int(r["original_order"])
-
-            added += db.execute("INSERT OR IGNORE INTO borrowers VALUES(?,?,?,?)",(row["id"],position,json.dumps(row),json.dumps(r))).rowcount
-
+        for snapshot in snapshots:
+            decision = by_id[snapshot['borrower_id']]
+            row, position = presentation(snapshot, decision)
+            added += db.execute('INSERT OR IGNORE INTO borrowers VALUES(?,?,?,?)',
+                                (row['id'], position, json.dumps(row), json.dumps(snapshot))).rowcount
         return added
+
+
+def presentation(snapshot, decision):
+    route = decision['route']
+    status = ('Eligible' if route == 'CALL' else 'Scheduled' if route.startswith('WAIT')
+              else 'Human review' if route == 'HUMAN_SUPPORT' else 'Paused')
+    row = dict(id=snapshot.get('loan_number') or snapshot['borrower_id'],
+               borrower_id=snapshot['borrower_id'], name=snapshot.get('display_name', ''),
+               balance=int(snapshot['outstanding_inr']), status=status,
+               language=snapshot.get('language_code', 'en-IN'), score=decision['score'],
+               route=route, action=decision['reason'], reason=decision['reason'],
+               outcome='Snapshot evaluated', owner='Unassigned', history=[],
+               due=snapshot.get('next_agreed_followup_ist') or snapshot.get('requested_callback_at_ist')
+               or snapshot.get('active_promise_due_ist') or '')
+    return row, decision.get('rank', 100000 + int(snapshot.get('original_order') or 0))
+
+
+def rerank(db, at=None):
+    stored = list(db.execute('SELECT id,snapshot FROM borrowers WHERE snapshot IS NOT NULL'))
+    snapshots = [json.loads(snapshot) for _, snapshot in stored]
+    if at:
+        for snapshot in snapshots:
+            snapshot['as_of_ist'] = at
+    decisions = rank_borrowers(snapshots)
+    by_id = {r['borrower_id']: r for r in decisions['ranked'] + decisions['excluded']}
+    for (key, _), snapshot in zip(stored, snapshots):
+        row, position = presentation(snapshot, by_id[snapshot['borrower_id']])
+        db.execute('UPDATE borrowers SET position=?,record=?,snapshot=? WHERE id=?',
+                   (position, json.dumps(row), json.dumps(snapshot), key))
+    return decisions
 
 
 
@@ -230,7 +249,8 @@ async def upload_dataset(request: Request):
 
             with zipfile.ZipFile(io.BytesIO(body)) as archive:
 
-                if archive.getinfo("borrowers.csv").file_size > 32 * 1024 * 1024:
+                member = 'borrowers.csv' if 'borrowers.csv' in archive.namelist() else 'blind/borrowers.csv'
+                if archive.getinfo(member).file_size > 32 * 1024 * 1024:
 
                     raise HTTPException(413, "Borrower table too large")
 

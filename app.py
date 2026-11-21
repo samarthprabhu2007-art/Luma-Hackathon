@@ -16,6 +16,8 @@ from pydantic import BaseModel
 load_dotenv(Path(__file__).with_name(".env"))
 
 import cashfree  # noqa: E402
+import ranking_gateway  # noqa: E402
+from lambda_backend.ranking import RankingInputError  # noqa: E402
 from sarvam_client import create_sarvam_client  # noqa: E402
 from sarvam_reminder import generate_reminder  # noqa: E402
 
@@ -24,6 +26,8 @@ LANGS = {"hi": "hi-IN", "kn": "kn-IN", "ta": "ta-IN", "te": "te-IN"}  # what sar
 app = FastAPI(title="Level 1 reminder + pay")
 from shared_book import router as book_router
 app.include_router(book_router)
+from collections_actions import router as collections_router
+app.include_router(collections_router)
 app.include_router(lender_ocr_router)
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 EVENTS: list[dict] = []  # webhook log (in memory)
@@ -34,6 +38,10 @@ class Reminder(BaseModel):
     phone: str
     amount: float
     language: str = "hi"
+
+
+class RankingRequest(BaseModel):
+    borrowers: list[dict]
 
 
 @app.get("/")
@@ -50,7 +58,19 @@ def index():
 def health():
     return {"cashfree_configured": cashfree.configured(),
             "sarvam_configured": create_sarvam_client() is not None,
+            "ranking_lambda_configured": ranking_gateway.configured(),
             "webhook_public_url": bool(os.getenv("PUBLIC_BASE_URL"))}
+
+
+@app.post("/api/rank")
+def rank(req: RankingRequest):
+    """Relay/backend action: rank a synthetic borrower snapshot locally or via Lambda."""
+    try:
+        return ranking_gateway.rank_borrowers(req.borrowers)
+    except RankingInputError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except ranking_gateway.RankingGatewayError as exc:
+        raise HTTPException(502, str(exc)) from exc
 
 
 @app.post("/api/remind")
