@@ -38,6 +38,7 @@ class Reminder(BaseModel):
     phone: str
     amount: float
     language: str = "hi"
+    include_audio: bool = True  # Relay HTTP steps can set false to keep the response small
 
 
 class RankingRequest(BaseModel):
@@ -110,7 +111,7 @@ def remind(req: Reminder):
         raise HTTPException(502, str(e))
 
     return {"text": text, "text_source": "template" if used_template else "sarvam",
-            "audio_b64": audio, "notes": notes, "amount": req.amount,
+            "audio_b64": audio if req.include_audio else None, "notes": notes, "amount": req.amount,
             "link_id": link["link_id"], "link_url": link["link_url"], "link_status": link["link_status"]}
 
 
